@@ -8,6 +8,7 @@ describe PathFileOperations do
 
   it "should join correct path and correct file name" do
     @path_file_operations.join('C:\\my_folder\\', 'foo.txt').should == 'C:\\my_folder\\foo.txt'
+
   end
 
   it "should join incorrect path and incorrect file name" do
