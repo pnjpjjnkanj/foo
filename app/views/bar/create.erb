@@ -1,0 +1,14 @@
+<%= link_to "Create New User", :controller => "bar", :action => "new" %><br/>
+
+<table width="100%" border="10">
+  <% for user in @users %>
+    <tr>
+      <td>
+        <%= user.name %>
+      </td>
+      <td>
+        <%= user.title %>
+      </td>
+    </tr>
+  <% end %>
+</table>

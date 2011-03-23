@@ -1,0 +1,12 @@
+<%# link_to_remote "Get Test Info",
+:url => { :action => "create" },
+:update => { :success => "new", :failure => "new" } %>
+
+<a href="#" onClick="<%= remote_function(:update => "some_control", :url => { :action => :ajax }) %>; return false;">Click me!</a>
+<a href="#" onClick="<%= remote_function(:update => 'some_control', :url => { :action => :ajax })%>; return false;">Click me2</a>
+
+<%= link_to "Click here",  { :controller => :bar ,:action => :ajax },  :remote => true %>
+
+<div id="some_control">
+  Some text
+</div>

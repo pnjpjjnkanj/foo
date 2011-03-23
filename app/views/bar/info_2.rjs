@@ -1,0 +1,2 @@
+page<<'$("#someDiv").css("border","3px solid red");'
+page<<'$("#someDiv").html("<%= @first_user %>");'

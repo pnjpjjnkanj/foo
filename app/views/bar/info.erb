@@ -1,0 +1,10 @@
+<%= form_tag :remote => true do %>
+
+
+  <%= link_to "Test link",  { :controller => :bar, :action => :info_2 },  :remote => true %>
+
+  <div id="someDiv">
+    Some text
+  </div>
+
+<% end %>

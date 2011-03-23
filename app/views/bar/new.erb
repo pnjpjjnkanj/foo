@@ -1,0 +1,13 @@
+<%= link_to "View User List", :controller => "bar", :action => "create" %><br/>
+
+<%= form_for @user, :url => '/bar/create' do |u| %>
+  Name: <%= u.text_field :name %><br/>
+  Position: <%= u.text_field :title %><br/>
+  <%= u.submit 'Create!' %><br/>
+<% end %>
+
+
+<% form_tag do %>
+  <%= check_box_tag 'name', value = "1", checked = false, options = {} %> Hello
+  <input type="checkbox" name="foo"/> World
+<% end %>

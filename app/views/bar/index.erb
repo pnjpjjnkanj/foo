@@ -1,0 +1,7 @@
+<table border="5">
+  <tr>
+    <%# render :partial => 'part_1', :object => "Part A" %>
+    <%= render :partial => 'part_1', :object => "Part B", :locals => {:title => "Products Page"} %>
+    <%# render :partial => 'part_1', :collection => ["Part C", "Part D"] %>
+  </tr>
+</table>

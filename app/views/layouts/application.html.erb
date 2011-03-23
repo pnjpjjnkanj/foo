@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Foo</title>
+    <%= stylesheet_link_tag :all %>
+    <%= javascript_include_tag :defaults %>
+    <%= csrf_meta_tag %>
+  </head>
+  <body>
+
+    <table width="100%" border="10">
+      <tr>
+        <td height="100px">Head</td>
+      </tr>
+      <tr>
+        <td height="300px"><%= yield %></td>
+      </tr>
+      <tr>
+        <td height="100px">Footer</td>
+      </tr>
+    </table>
+
+
+  </body>
+</html>
