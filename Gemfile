@@ -4,6 +4,8 @@ gem 'rails', '3.0.5'
 
 gem 'jquery-rails'
 
+gem 'haml'
+
 # Bundle edge Rails instead:
 # gem 'rails', :git => 'git://github.com/rails/rails.git'
 
