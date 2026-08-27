@@ -1,9 +1,9 @@
 name: Automated Workforce Pipeline
 
 on:
+  repository_dispatch:
+    types: [run-task]
   workflow_dispatch:
-  schedule:
-    - cron: '0 * * * *'
 
 concurrency:
   group: system-runner-${{ github.workflow }}-${{ github.ref }}
